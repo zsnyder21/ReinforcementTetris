@@ -63,6 +63,11 @@ class Tetris(object):
         self.reset()
 
     def reset(self):
+        """
+        Reset the board
+
+        :return: None
+        """
         self.board = [[0] * self.width for _ in range(self.height)]
         self.score = 0
         self.tetrominoes = 0
@@ -77,13 +82,25 @@ class Tetris(object):
         return self.getStateProperties(self.board)
 
     def getStateProperties(self, board: list) -> torch.FloatTensor:
+        """
+        Get properties of the state
+
+        :param board: Board to use
+        :return: A tensor containing number of lines cleared, number of holes, bumpiness, and height
+        """
         linesCleared, board = self.checkClearedRows(board)
         holes = self.getHoles(board)
         bumpiness, height = self.getBumpinessAndHeight(board)
 
         return torch.FloatTensor([linesCleared, holes, bumpiness, height])
 
-    def checkClearedRows(self, board: list):
+    def checkClearedRows(self, board: list) -> tuple:
+        """
+        Check if there are any rows to be deleted
+
+        :param board: Board to check
+        :return: Number of rows to delete, and the board
+        """
         toDelete = []
         for i, row in enumerate(board[::-1]):
             if 0 not in row:
@@ -144,7 +161,12 @@ class Tetris(object):
 
         return totalBumpiness, totalHeight
 
-    def getNextStates(self):
+    def getNextStates(self) -> dict:
+        """
+        Get possible next states
+
+        :return: Dictionary of possible next states
+        """
         states = {}
         pieceId = self.idx
         currentPiece = self.piece[:]
