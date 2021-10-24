@@ -308,13 +308,13 @@ class Tetris(object):
         if self.checkCollision(self.piece, self.currentPosition):
             self.gameOver = True
 
-    def step(self, action: tuple, render: bool = True, video: str = None) -> tuple:
+    def step(self, action: tuple, render: bool = True, video: cv2.VideoWriter = None) -> tuple:
         """
         Run over a step of the game, saving necessary information happening during the step
 
         :param action: Action to take. A tuple of location and rotation
         :param render: Whether to render the board
-        :param video: Where to save the recording?
+        :param video: cv2 VideoWriter instance
         :return: Tuple of current score and whether or not the game is over
         """
         x, rotations = action
@@ -347,10 +347,10 @@ class Tetris(object):
 
         return score, self.gameOver
 
-    def render(self, video: str = None) -> None:
+    def render(self, video: cv2.VideoWriter = None) -> None:
         """
         Render the game
-        :param video:
+        :param video: cv2 VideoWriter instance
         :return:
         """
         if not self.gameOver:

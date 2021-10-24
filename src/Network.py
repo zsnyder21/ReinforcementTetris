@@ -4,9 +4,9 @@ class TetrisNetwork(nn.Module):
     def __init__(self):
         super(TetrisNetwork, self).__init__()
 
-        self.conv1 = nn.Sequential(nn.Linear(4, 64), nn.ReLU(inplace=True))
-        self.conv2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True))
-        self.conv3 = nn.Sequential(nn.Linear(64, 1), nn.ReLU(inplace=True))
+        self.fc1 = nn.Sequential(nn.Linear(4, 64), nn.ReLU(inplace=True))
+        self.fc2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True))
+        self.fc3 = nn.Sequential(nn.Linear(64, 1), nn.ReLU(inplace=True))
 
         self._createWeights()
 
@@ -28,8 +28,8 @@ class TetrisNetwork(nn.Module):
         :param x: Input to the first layer of the neural net
         :return: Output of the final neural net
         """
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
 
         return x
