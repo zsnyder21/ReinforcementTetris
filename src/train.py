@@ -31,11 +31,11 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--final_epsilon", type=float, default=1e-3)
     parser.add_argument("--num_decay_epochs", type=float, default=2000)
     parser.add_argument("--num_epochs", type=int, default=30000)
-    parser.add_argument("--save_interval", type=int, default=30)
-    parser.add_argument("--replay_memory_size", type=int, default=1000,
+    parser.add_argument("--save_interval", type=int, default=1000)
+    parser.add_argument("--replay_memory_size", type=int, default=300000,
                         help="Number of epoches between testing phases")
     parser.add_argument("--log_path", type=str, default="tensorboard")
-    parser.add_argument("--saved_path", type=str, default="test_trained_models")
+    parser.add_argument("--saved_path", type=str, default="trained_models")
 
     args = parser.parse_args()
     return args
