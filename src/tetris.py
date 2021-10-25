@@ -26,19 +26,19 @@ class Tetris(object):
         [[0, 2, 0],
          [2, 2, 2]],
 
-    [[0, 3, 3],
-     [3, 3, 0]],
+        [[0, 3, 3],
+         [3, 3, 0]],
 
-    [[4, 4, 0],
-     [0, 4, 4]],
+        [[4, 4, 0],
+         [0, 4, 4]],
 
-    [[5, 5, 5, 5]],
+        [[5, 5, 5, 5]],
 
-    [[0, 0, 6],
-     [6, 6, 6]],
+        [[0, 0, 6],
+         [6, 6, 6]],
 
-    [[7, 0, 0],
-     [7, 7, 7]]
+        [[7, 0, 0],
+         [7, 7, 7]]
     ]
 
     def __init__(self, height: int = 20, width: int = 10, blockSize: int = 20):
@@ -47,7 +47,7 @@ class Tetris(object):
         self.blockSize = blockSize
         self.textColor = (200, 20, 220)
         self.backupBoard = np.ones(
-            (self.height * self.blockSize * self.width * int(self.blockSize / 2), 3), dtype=np.uint8
+            (self.height * self.blockSize, self.width * int(self.blockSize / 2), 3), dtype=np.uint8
         ) * np.array([201, 201, 255], dtype=np.uint8)
 
         self.board = None
@@ -149,7 +149,7 @@ class Tetris(object):
         :param board: Board to compute with
         :return: Tuple containing the bumpiness and the height
         """
-        board = np.array(boarD)
+        board = np.array(board)
         mask = board != 0
         invertedHeights = np.where(mask.any(axis=0), np.argmax(mask, axis=0), self.height)
         heights = self.height - invertedHeights
@@ -172,7 +172,7 @@ class Tetris(object):
         currentPiece = self.piece[:]
 
         if pieceId == 0:
-            rotations = 0
+            rotations = 1
         elif pieceId in {2, 3, 4}:
             rotations = 2
         else:
@@ -181,11 +181,11 @@ class Tetris(object):
         for i in range(rotations):
             validX = self.width - len(currentPiece[0])
             for x in range(validX + 1):
-                piece = curr_piece[:]
+                piece = currentPiece[:]
                 position = {"x": x, "y": 0}
 
                 while not self.checkCollision(piece, position):
-                    pos["y"] += 1
+                    position["y"] += 1
 
                 self.truncate(piece, position)
                 board = self.store(piece, position)
@@ -203,7 +203,7 @@ class Tetris(object):
         :param position: Position of piece
         :return: Boolean indicating whether or not collision would occur
         """
-        futureY = pos["y"] + 1
+        futureY = position["y"] + 1
         for y in range(len(piece)):
             for x in range(len(piece[y])):
                 if futureY + y > self.height - 1 or (self.board[futureY + y][position["x"] + x] and piece[y][x]):
@@ -248,7 +248,9 @@ class Tetris(object):
         :param position: Where to store it
         :return: New board
         """
-        board = self.board[:]
+
+        # This comprehension is necessary so we don't alter the individual rows of the board before we are ready
+        board = [x[:] for x in self.board]
         for y in range(len(piece)):
             for x in range(len(piece[y])):
                 if piece[y][x] and not board[y + position["y"]][x + position["x"]]:
@@ -281,7 +283,8 @@ class Tetris(object):
 
         :return: The board
         """
-        board = self.board[:]
+        # This comprehension is necessary so we don't alter the individual rows of the board before we are ready
+        board = [x[:] for x in self.board]
         for y in range(len(self.piece)):
             for x in range(len(self.piece[y])):
                 board[y + self.currentPosition["y"]][x + self.currentPosition["x"]] = self.piece[y][x]
@@ -301,7 +304,7 @@ class Tetris(object):
         self.idx = self.bag.pop()
         self.piece = self.pieces[self.idx][:]
         self.currentPosition = {
-            "x": self.width // 2 - len(self.piece[0] // 2),
+            "x": self.width // 2 - len(self.piece[0]) // 2,
             "y": 0
         }
 
@@ -362,7 +365,7 @@ class Tetris(object):
         img = img[..., ::-1]
         img = Image.fromarray(img, "RGB")
 
-        img = img.resize((self.width * self.blockSize, self.height * self.blockSize))
+        img = img.resize((self.width * self.blockSize, self.height * self.blockSize), 0)
         img = np.array(img)
         img[[i * self.blockSize for i in range(self.height)], :, :] = 0
         img[:, [i * self.blockSize for i in range(self.width)], :] = 0
@@ -375,14 +378,14 @@ class Tetris(object):
                     (self.width * self.blockSize + int(self.blockSize / 2), 2 * self.blockSize),
                     fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
 
-        cv2.putText(img, "Pieces:", (self.width * self.block_size + int(self.block_size / 2), 4 * self.block_size),
+        cv2.putText(img, "Pieces:", (self.width * self.blockSize + int(self.blockSize / 2), 4 * self.blockSize),
                     fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
         cv2.putText(img, str(self.tetrominoes),
                     (self.width * self.blockSize + int(self.blockSize / 2), 5 * self.blockSize),
                     fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
 
         cv2.putText(img, "Lines:", (self.width * self.blockSize + int(self.blockSize / 2), 7 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
         cv2.putText(img, str(self.clearedLines),
                     (self.width * self.blockSize + int(self.blockSize / 2), 8 * self.blockSize),
                     fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
