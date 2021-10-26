@@ -12,6 +12,7 @@ def get_args():
     parser.add_argument("--width", type=int, default=10, help="The common width for all images")
     parser.add_argument("--height", type=int, default=20, help="The common height for all images")
     parser.add_argument("--block_size", type=int, default=30, help="Size of a block")
+    parser.add_argument("--render", default=False, help="Render the game", action=argparse.BooleanOptionalAction)
     parser.add_argument("--fps", type=int, default=300, help="frames per second")
     parser.add_argument("--saved_path", type=str, default="./trained_models/tetris_14000")
     parser.add_argument("--output", type=str, default="output.mp4")
@@ -60,7 +61,7 @@ def test(options: argparse.Namespace) -> None:
         index = torch.argmax(predictions).item()
         action = nextActions[index]
 
-        score, done = env.step(action, render=True, video=out)
+        score, done = env.step(action, render=options.render, video=out)
 
         totalScore += score
 
