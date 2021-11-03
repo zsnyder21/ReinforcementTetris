@@ -93,7 +93,6 @@ def train(options: argparse.Namespace) -> None:
         state = state.cuda()
 
     replayMemory = deque(maxlen=options.replay_memory_size)
-    # replayMemory = MaxQueue(maxlen=options.replay_memory_size, key=lambda x: x[1], metric=lambda x, y: x[1] > y[1])
     epoch = 0
 
     while epoch < options.num_epochs:

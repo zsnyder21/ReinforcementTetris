@@ -86,7 +86,9 @@ class Tetris(object):
         self.bag = list(range(len(self.pieces)))
         random.shuffle(self.bag)
         self.idx = self.bag.pop()
-        self.piece = self.pieces[self.idx][:]
+
+        # This comprehension is necessary so we don't alter the piece
+        self.piece = [row[:] for row in self.pieces[self.idx]]
         self.currentPosition = {"x": self.width // 2 - len(self.piece[0]) // 2, "y": 0}
         self.gameOver = False
         self.gameStart = datetime.now()
@@ -181,7 +183,9 @@ class Tetris(object):
         """
         states = {}
         pieceId = self.idx
-        currentPiece = self.piece[:]
+
+        # This comprehension is necessary so we don't alter the piece
+        currentPiece = [row[:] for row in self.piece]
 
         if pieceId == 0:
             rotations = 1
@@ -193,7 +197,8 @@ class Tetris(object):
         for i in range(rotations):
             validX = self.width - len(currentPiece[0])
             for x in range(validX + 1):
-                piece = currentPiece[:]
+                # This comprehension is necessary so we don't alter the piece
+                piece = [row[:] for row in currentPiece]
                 position = {"x": x, "y": 0}
 
                 while not self.checkCollision(piece, position):
@@ -315,7 +320,9 @@ class Tetris(object):
             random.shuffle(self.bag)
 
         self.idx = self.bag.pop()
-        self.piece = self.pieces[self.idx][:]
+
+        # This comprehension is necessary so we don't alter the piece
+        self.piece = [row[:] for row in self.pieces[self.idx]]
         self.currentPosition = {
             "x": self.width // 2 - len(self.piece[0]) // 2,
             "y": 0
@@ -360,7 +367,7 @@ class Tetris(object):
             self.getNewPiece()
 
         if self.gameOver:
-            self.score -= 2
+            self.score -= self.penalty
 
         return score, self.gameOver
 
