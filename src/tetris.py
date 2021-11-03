@@ -393,7 +393,7 @@ class Tetris(object):
         :param video: cv2 VideoWriter instance
         :return: None
         """
-        elapsedSeconds = (datetime.now() - self.gameStart).total_seconds() + 3600 * 24 * 10 + 3600 * 10 + 60 * 10 + 1
+        elapsedSeconds = (datetime.now() - self.gameStart).total_seconds()
 
         if not self.gameOver:
             img = [self.pieceColors[p] for row in self.getCurrentBoardState() for p in row]
