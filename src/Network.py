@@ -26,7 +26,7 @@ class TetrisNetwork(nn.Module):
         Run the network forward
 
         :param x: Input to the first layer of the neural net
-        :return: Output of the final neural net
+        :return: Output of the final neural net layer
         """
         x = self.fc1(x)
         x = self.fc2(x)

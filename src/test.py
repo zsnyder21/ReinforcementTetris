@@ -14,8 +14,11 @@ def get_args():
     parser.add_argument("--block_size", type=int, default=30, help="Size of a block")
     parser.add_argument("--render", default=False, help="Render the game", action=argparse.BooleanOptionalAction)
     parser.add_argument("--fps", type=int, default=300, help="frames per second")
-    parser.add_argument("--saved_path", type=str, default="./trained_models/tetris_14000")
+    parser.add_argument("--saved_path", type=str, default="./trained_models/tetris")
     parser.add_argument("--output", type=str, default="output.mp4")
+    parser.add_argument("--verbose", default=False, help="Print score upon completion",
+                        action=argparse.BooleanOptionalAction)
+    parser.add_argument("--random_seed", type=int, default=0, help="Zero will use a random seed")
 
     args = parser.parse_args()
     return args
@@ -30,9 +33,15 @@ def test(options: argparse.Namespace) -> None:
     """
     totalScore = 0
     if torch.cuda.is_available():
-        torch.cuda.manual_seed(12345)
+        if options.random_seed == 0:
+            torch.cuda.seed()
+        else:
+            torch.cuda.manual_seed(options.random_seed)
     else:
-        torch.manual_seed(12345)
+        if options.random_seed == 0:
+            torch.seed()
+        else:
+            torch.manual_seed(options.random_seed)
 
     if torch.cuda.is_available():
         model = torch.load(options.saved_path)
@@ -67,13 +76,16 @@ def test(options: argparse.Namespace) -> None:
 
         if done:
             out.release()
-            print(f"""
-                Final score: {env.score}
-                Tetrominoes: {env.tetrominoes}
-                Cleared Lines: {env.clearedLines}
-                """
-            )
-            break
+
+            if options.verbose:
+                print(f"""
+                    Final score: {env.score}
+                    Tetrominoes: {env.tetrominoes}
+                    Cleared Lines: {env.clearedLines}
+                    """
+                )
+
+            return env.score, env.tetrominoes, env.clearedLines
 
 
 def main() -> None:

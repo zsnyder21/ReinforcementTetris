@@ -4,10 +4,20 @@ import cv2
 import torch
 import random
 
+from datetime import datetime, timedelta
 from PIL import Image
 from matplotlib import style
 
+
 class Tetris(object):
+    penalty = 2
+    points = {
+        0: 0,
+        1: 40,
+        2: 100,
+        3: 300,
+        4: 1200
+    }
     pieceColors = [
         (0, 0, 0),
         (255, 255, 0),
@@ -18,7 +28,6 @@ class Tetris(object):
         (252, 147, 29),
         (0, 0, 255)
     ]
-
     pieces = [
         [[1, 1],
          [1, 1]],
@@ -41,13 +50,13 @@ class Tetris(object):
          [7, 7, 7]]
     ]
 
-    def __init__(self, height: int = 20, width: int = 10, blockSize: int = 20):
+    def __init__(self, height: int = 20, width: int = 10, blockSize: int = 20, randomState: int = None):
         self.height = height
         self.width = width
         self.blockSize = blockSize
-        self.textColor = (200, 20, 220)
-        self.backupBoard = np.ones(
-            (self.height * self.blockSize, self.width * int(self.blockSize / 2), 3), dtype=np.uint8
+        self.textColor = (0, 0, 0)
+        self.scoreboard = np.ones(
+            (self.height * self.blockSize, self.width * int(self.blockSize * 4/5), 3), dtype=np.uint8
         ) * np.array([201, 201, 255], dtype=np.uint8)
 
         self.board = None
@@ -59,6 +68,8 @@ class Tetris(object):
         self.piece = None
         self.currentPosition = None
         self.gameOver = None
+        self.gameStart = None
+        random.seed(randomState)
 
         self.reset()
 
@@ -78,6 +89,7 @@ class Tetris(object):
         self.piece = self.pieces[self.idx][:]
         self.currentPosition = {"x": self.width // 2 - len(self.piece[0]) // 2, "y": 0}
         self.gameOver = False
+        self.gameStart = datetime.now()
 
         return self.getStateProperties(self.board)
 
@@ -258,7 +270,8 @@ class Tetris(object):
 
         return board
 
-    def rotate(self, piece: list) -> list:
+    @staticmethod
+    def rotate(piece: list) -> list:
         """
         Rotate a piece
 
@@ -338,24 +351,50 @@ class Tetris(object):
         self.board = self.store(self.piece, self.currentPosition)
 
         linesCleared, self.board = self.checkClearedRows(self.board)
-        score = 1 + (linesCleared ** 2) * self.width
+        score = 1 + (linesCleared ** 2) * self.width # 1 + self.points[linesCleared]
         self.score += score
         self.tetrominoes += 1
         self.clearedLines += linesCleared
 
         if not self.gameOver:
             self.getNewPiece()
-        else:
+
+        if self.gameOver:
             self.score -= 2
 
         return score, self.gameOver
+
+    @staticmethod
+    def displayGameTime(seconds: int, granularity: int = 4) -> str:
+        """
+        Convert a time difference given in seconds to a readable format
+
+        :param seconds: Number of elapsed seconds
+        :param granularity: How granular to display the results (1: days, 2:
+        :return: String representing the time elapsed
+        """
+        intervals = (
+            ('d', 86400),  # 60 * 60 * 24
+            ('h', 3600),  # 60 * 60
+            ('m', 60),
+            ('s', 1),
+        )
+        result = []
+        for name, count in intervals:
+            value = seconds // count
+            if value:
+                seconds -= value * count
+                result.append(f"{int(value)}{name}")
+        return ' '.join(result[:granularity])
 
     def render(self, video: cv2.VideoWriter = None) -> None:
         """
         Render the game
         :param video: cv2 VideoWriter instance
-        :return:
+        :return: None
         """
+        elapsedSeconds = (datetime.now() - self.gameStart).total_seconds() + 3600 * 24 * 10 + 3600 * 10 + 60 * 10 + 1
+
         if not self.gameOver:
             img = [self.pieceColors[p] for row in self.getCurrentBoardState() for p in row]
         else:
@@ -370,25 +409,30 @@ class Tetris(object):
         img[[i * self.blockSize for i in range(self.height)], :, :] = 0
         img[:, [i * self.blockSize for i in range(self.width)], :] = 0
 
-        img = np.concatenate((img, self.backupBoard), axis=1)
+        img = np.concatenate((img, self.scoreboard), axis=1)
 
         cv2.putText(img, "Score:", (self.width * self.blockSize + int(self.blockSize / 2), self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
         cv2.putText(img, str(self.score),
                     (self.width * self.blockSize + int(self.blockSize / 2), 2 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
 
         cv2.putText(img, "Pieces:", (self.width * self.blockSize + int(self.blockSize / 2), 4 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
         cv2.putText(img, str(self.tetrominoes),
                     (self.width * self.blockSize + int(self.blockSize / 2), 5 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
 
         cv2.putText(img, "Lines:", (self.width * self.blockSize + int(self.blockSize / 2), 7 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
         cv2.putText(img, str(self.clearedLines),
                     (self.width * self.blockSize + int(self.blockSize / 2), 8 * self.blockSize),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.textColor)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
+        cv2.putText(img, "Game Time:", (self.width * self.blockSize + int(self.blockSize / 2), 10 * self.blockSize),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
+        cv2.putText(img, self.displayGameTime(elapsedSeconds), (self.width * self.blockSize + int(self.blockSize / 2),
+                                                                11 * self.blockSize),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.75, color=self.textColor)
 
         if video:
             video.write(img)

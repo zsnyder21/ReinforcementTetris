@@ -6,12 +6,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from random import random, randint, sample
+from random import random, randint, sample, seed
 from tensorboardX import SummaryWriter
 from Network import TetrisNetwork
 from tetris import Tetris
 from collections import deque
-
+from MaxQueue import MaxQueue
 
 def get_args() -> argparse.Namespace:
     """
@@ -25,17 +25,19 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--block_size", type=int, default=30, help="Size of a block")
     parser.add_argument("--batch_size", type=int, default=512, help="The number of images per batch")
     parser.add_argument("--render", default=False, help="Render the game", action=argparse.BooleanOptionalAction)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--initial_epsilon", type=float, default=1)
     parser.add_argument("--final_epsilon", type=float, default=1e-3)
-    parser.add_argument("--num_decay_epochs", type=float, default=2000)
+    parser.add_argument("--num_decay_epochs", type=int, default=2000)
     parser.add_argument("--num_epochs", type=int, default=30000)
     parser.add_argument("--save_interval", type=int, default=1000)
-    parser.add_argument("--replay_memory_size", type=int, default=300000,
-                        help="Number of epoches between testing phases")
-    parser.add_argument("--log_path", type=str, default="tensorboard")
-    parser.add_argument("--saved_path", type=str, default="trained_models")
+    parser.add_argument("--replay_memory_size", type=int, default=30000,
+                        help="Number of epochs between testing phases")
+    parser.add_argument("--log_path", type=str, default="./tensorboard")
+    parser.add_argument("--saved_path", type=str, default="./trained_models_TEST")
+    parser.add_argument("--log_file", type=str, default="./log/log.log")
+    parser.add_argument("--random_seed", type=int, default=None, help="Random seed to use")
 
     args = parser.parse_args()
     return args
@@ -49,20 +51,40 @@ def train(options: argparse.Namespace) -> None:
     :return: None
     """
     bestScore = 0
+    bestEpoch = 0
+    seed(options.random_seed)
+
     if torch.cuda.is_available():
-        torch.cuda.manual_seed(123)
+        if not options.random_seed:
+            torch.cuda.seed()
+        else:
+            torch.cuda.manual_seed(options.random_seed)
     else:
-        torch.manual_seed(123)
+        if not options.random_seed:
+            torch.seed()
+        else:
+            torch.manual_seed(options.random_seed)
 
     if os.path.isdir(options.log_path):
         shutil.rmtree(options.log_path)
 
     os.makedirs(options.log_path)
+
+    dir = os.path.dirname(options.log_file)
+
+    if dir:
+        os.makedirs(dir, exist_ok=True)
+
     writer = SummaryWriter(options.log_path)
-    env = Tetris(width=options.width, height=options.height, blockSize=options.block_size)
     model = TetrisNetwork()
     optimizer = torch.optim.Adam(model.parameters(), lr=options.lr)
     criterion = nn.MSELoss()
+    env = Tetris(
+        width=options.width,
+        height=options.height,
+        blockSize=options.block_size,
+        randomState=options.random_seed
+    )
 
     state = env.reset()
 
@@ -71,6 +93,7 @@ def train(options: argparse.Namespace) -> None:
         state = state.cuda()
 
     replayMemory = deque(maxlen=options.replay_memory_size)
+    # replayMemory = MaxQueue(maxlen=options.replay_memory_size, key=lambda x: x[1], metric=lambda x, y: x[1] > y[1])
     epoch = 0
 
     while epoch < options.num_epochs:
@@ -94,6 +117,7 @@ def train(options: argparse.Namespace) -> None:
             predictions = model(nextStates)[:, 0]
 
         model.train()
+        # print(predictions)
 
         if randomAction:
             index = randint(0, len(nextSteps) - 1)
@@ -123,6 +147,7 @@ def train(options: argparse.Namespace) -> None:
             continue
 
         if len(replayMemory) < options.replay_memory_size / 10:
+            # Build some replay memory before commencing with training
             continue
 
         epoch += 1
@@ -154,11 +179,18 @@ def train(options: argparse.Namespace) -> None:
         loss.backward()
         optimizer.step()
 
-        print(
-            f"""
-                Epoch: {epoch}/{options.num_epochs}, Action: {action}, Score: {finalScore}, Tetrominoes {finalTetrominoes}, Cleared Lines: {finalClearedLines}
-            """
-        )
+        with open(options.log_file, "a") as file:
+            print(
+                f"""
+                    Epoch: {epoch}/{options.num_epochs}, Action: {action} ({'Random' if randomAction else 'Exploitative'}), Score: {finalScore}, Tetrominoes {finalTetrominoes}, Cleared Lines: {finalClearedLines}, Best Epoch: {bestEpoch}, Best Score: {bestScore}
+                """.strip()
+            )
+            print(
+                f"""
+                    Epoch: {epoch}/{options.num_epochs}, Action: {action}, Score: {finalScore}, Tetrominoes {finalTetrominoes}, Cleared Lines: {finalClearedLines}, Best Epoch: {bestEpoch}, Best Score: {bestScore}
+                """.strip(),
+                file=file
+            )
 
         writer.add_scalar("Train/Score", finalScore, epoch - 1)
         writer.add_scalar("Train/Tetrominoes", finalTetrominoes, epoch - 1)
@@ -168,6 +200,7 @@ def train(options: argparse.Namespace) -> None:
 
         if finalScore > bestScore:
             bestScore = finalScore
+            bestEpoch = epoch
             torch.save(model, f"{options.saved_path}/tetris_best")
 
         if epoch > 0 and epoch % options.save_interval == 0:
