@@ -6,7 +6,7 @@ class TetrisNetwork(nn.Module):
 
         self.fc1 = nn.Sequential(nn.Linear(4, 64), nn.ReLU(inplace=True))
         self.fc2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True))
-        self.fc3 = nn.Sequential(nn.Linear(64, 1), nn.ReLU(inplace=True))
+        self.fc3 = nn.Sequential(nn.Linear(64, 1))
 
         self._createWeights()
 
